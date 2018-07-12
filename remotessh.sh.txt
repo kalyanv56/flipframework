@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+#initializing environment variables
 env='dev_phase'
 tdy=`date +%Y-%m-%d`
 TIMESTAMP=`date "+%Y-%m-%d %H:%M:%S"`
