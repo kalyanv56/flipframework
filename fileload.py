@@ -279,7 +279,7 @@ def tmeStmpCheck(fleSzeChk, tsOutput, curTSTMp, table):
 ##############################################################################################################################
 
 
-def flushOutput(as_of_dt, bus_flag, dict, seqDict, seq_ext, res_cnt, json_load, seq, op, proc_id, insrt_ts, sec_ord,
+def flushOutput(as_of_dt,co_Id, bus_flag, dict, seqDict, seq_ext, res_cnt, json_load, seq, op, proc_id, insrt_ts, sec_ord,
                 rec_id, rec_id_fl):
     output = ''
     if sec_ord in dict.keys():
@@ -311,13 +311,18 @@ def flushOutput(as_of_dt, bus_flag, dict, seqDict, seq_ext, res_cnt, json_load, 
                 output = output + populateNulls(cols, json_load)
         cnt = cnt + 1
         rec_id = rec_id + 1
-        if bus_flag == 'True':
-            if rec_id_fl == 'True':
-                output = str(rec_id) + '|' + as_of_dt + '|' + output + proc_id + '|' + insrt_ts + '\n'
-            else:
-                output = as_of_dt + '|' + output + proc_id + '|' + insrt_ts + '\n'
+        if  "cmpny_id_fl" in json_load["db_prop"][0].keys():
+            output = co_Id+'|'+output+proc_id + '|' + insrt_ts
         else:
-            output = output + proc_id + '|' + insrt_ts + '\n'
+            output = output+proc_id + '|' + insrt_ts
+
+        if bus_flag=='True':
+            if rec_id_fl=='True':
+                output = str(rec_id)+'|'+as_of_dt+'|'+output +'\n'
+            else:
+                output = as_of_dt+'|'+output+'\n'
+        else:
+            output=output +'\n'
         op.write(output)
         res_cnt = res_cnt + 1
 
@@ -453,10 +458,12 @@ def process(json_load, inp, op, tsOutput, fleSzeChk, table):
     cnt, seq_cnt, res_cnt, rec_id = 0, 0, 0, 0
     proc_id = json_load["db_prop"][0]["hdfs_proc_id"]
     insrt_ts = str(datetime.datetime.now())
-    as_of_dt = ''
+    as_of_dt,co_Id = '',''
     bus_flag = 'False'
     if "bus_proc_dt" in json_load["db_prop"][0].keys():
         bus_flag = json_load["db_prop"][0]["bus_proc_dt"]
+    if "cmpny_id_fl" in json_load["db_prop"][0].keys():
+        coLneStrts,coStrt,coEnd,cmpny_id_fl=json_load["db_prop"][0]["cmpny_id_fl"][0].split(',')
     rec_id_fl = 'False'
     mul_seq_Cnt = {}
     dflt_Key = ''
@@ -517,13 +524,14 @@ def process(json_load, inp, op, tsOutput, fleSzeChk, table):
                                                                                                                 int(
                                                                                                                     strt_dt) + 3:int(
                                                                                                                     strt_dt) + 5]
-
+        if cmpny_id_fl=='True' and line.startswith(coLneStrts):
+            co_Id=line[int(coStrt):int(coEnd)]
         recrd_ext = line[int(lsPos):int(lePos)] + line[int(isPos):int(iePos)]
         if (((line.startswith(flush) or line[int(lsPos):int(lePos)] == flush or recrd_ext == flush) or (
                 line.startswith(sec_ord) and sec_ord != '')) or (
                     line.startswith(trLr) or trLr == 'default')) and cnt != 0:
             if len(frstDict.keys()) != 0:
-                res_cnt, rec_id = flushOutput(as_of_dt, bus_flag, frstDict, seqDict, seq_ext, res_cnt, json_load, seq,
+                res_cnt, rec_id = flushOutput(as_of_dt,co_Id,bus_flag, frstDict, seqDict, seq_ext, res_cnt, json_load, seq,
                                               op, proc_id, insrt_ts, sec_ord, rec_id, rec_id_fl)
                 frstDict, seqDict = {}, {}
                 mul_seq_Cnt = {}
